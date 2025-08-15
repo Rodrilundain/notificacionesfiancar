@@ -2,7 +2,7 @@ const HOJA_EQUIPO = 'Equipo'; // Asegúrate de que la hoja se llame exactamente 
 
 // Renderiza el HTML
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index'); // Asegurate que el archivo HTML se llame 'dashboard'
+  return HtmlService.createHtmlOutputFromFile('dashboard'); // Asegurate que el archivo HTML se llame 'index'
 }
 
 // Cargar los datos del equipo actual
