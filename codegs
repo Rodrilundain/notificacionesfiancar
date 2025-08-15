@@ -1,0 +1,75 @@
+const HOJA_EQUIPO = 'Equipo'; // Asegúrate de que la hoja se llame exactamente así
+
+// Renderiza el HTML
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index'); // Asegurate que el archivo HTML se llame 'dashboard'
+}
+
+// Cargar los datos del equipo actual
+function getTeamData() {
+  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_EQUIPO);
+  const data = hoja.getDataRange().getValues();
+
+  return data.map((row, i) => {
+    if (i === 0) return null; // Omitimos encabezado
+    return {
+      id: i + 1, // +1 porque las filas en Sheets empiezan en 1
+      nombre: row[0],
+      email: row[1],
+      sector: row[2],
+      local: row[3]
+    };
+  }).filter(Boolean);
+}
+
+// Agregar nuevo miembro y notificar a todos
+function addMember(nombre, email, sector, local, mensajeHtml) {
+  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_EQUIPO);
+  if (!hoja) throw new Error('No se encontró la hoja llamada "Equipo"');
+
+  // Guardar al nuevo miembro
+  hoja.appendRow([nombre, email, sector, local, new Date()]);
+
+  // Obtener correos del equipo actual (sin duplicar al nuevo)
+  const data = hoja.getDataRange().getValues();
+  const correosEquipo = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const miembroEmail = data[i][1]; // Columna B
+    if (miembroEmail && miembroEmail !== email) {
+      correosEquipo.push(miembroEmail);
+    }
+  }
+
+  // Reemplazar tokens en el mensaje
+  const mensajeFinal = mensajeHtml
+    .replace(/{{nombre}}/gi, nombre)
+    .replace(/{{sector}}/gi, sector)
+    .replace(/{{local}}/gi, local);
+
+  // Enviar correo al nuevo miembro y en copia a los demás
+  GmailApp.sendEmail(email, `Bienvenido/a a Grupo Fiancar`, '', {
+    htmlBody: mensajeFinal,
+    cc: correosEquipo.join(',') // copia al resto del equipo
+  });
+}
+
+// Eliminar miembro por ID y notificar
+function removeMemberById(id, mensajeHtml) {
+  const hoja = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA_EQUIPO);
+  if (!hoja) throw new Error('No se encontró la hoja llamada "Equipo"');
+
+  const fila = hoja.getRange(id, 1, 1, hoja.getLastColumn()).getValues()[0];
+  const [nombre, email, sector, local] = fila;
+
+  const mensajeFinal = mensajeHtml
+    .replace(/{{nombre}}/gi, nombre)
+    .replace(/{{sector}}/gi, sector)
+    .replace(/{{local}}/gi, local);
+
+  GmailApp.sendEmail(email, "Baja del equipo de Grupo Fiancar", "", {
+    htmlBody: mensajeFinal
+  });
+
+  hoja.deleteRow(id);
+}
